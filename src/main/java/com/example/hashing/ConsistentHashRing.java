@@ -112,4 +112,103 @@ public class ConsistentHashRing {
     public boolean isEmpty() {
         return ring.isEmpty();
     }
+
+    /**
+     * Analyze key distribution across servers
+     *
+     * @param numberOfKeys Number of random keys to test
+     */
+    public void analyzeDistribution(int numberOfKeys) {
+        if (servers.isEmpty()) {
+            System.out.println("❌ No servers in ring for distribution analysis");
+            return;
+        }
+
+        Map<String, Integer> distribution = new HashMap<>();
+
+        // Initialize counters
+        for (String server : servers) {
+            distribution.put(server, 0);
+        }
+
+        // Generate random keys and track distribution
+        Random random = new Random();
+        for (int i = 0; i < numberOfKeys; i++) {
+            String key = "key_" + random.nextInt(100000);
+            String server = getServer(key);
+            if (server != null) {
+                distribution.put(server, distribution.get(server) + 1);
+            }
+        }
+
+        // Print distribution analysis
+        System.out.println("\n📈 === DISTRIBUTION ANALYSIS (Basic Ring) ===");
+        System.out.println("Sample size: " + numberOfKeys + " random keys");
+        System.out.println("Expected per server: " + (numberOfKeys / servers.size()) + " keys");
+        System.out.println("⚠️  Note: Without virtual nodes, distribution may be uneven!\n");
+
+        double expectedPerServer = (double) numberOfKeys / servers.size();
+
+        for (Map.Entry<String, Integer> entry : distribution.entrySet()) {
+            String server = entry.getKey();
+            int keyCount = entry.getValue();
+            double percentage = (keyCount * 100.0) / numberOfKeys;
+            double deviation = Math.abs(keyCount - expectedPerServer) / expectedPerServer * 100;
+
+            System.out.printf("%-20s: %6d keys (%5.1f%%) | Deviation: %5.1f%%\n",
+                    server, keyCount, percentage, deviation);
+        }
+        System.out.println("===============================================\n");
+    }
+
+    /**
+     * Print detailed ring information (for debugging)
+     */
+    public void printRingDetails() {
+        System.out.println("\n🔍 === BASIC RING INFORMATION ===");
+        System.out.println("Total Servers: " + servers.size());
+        System.out.println("Ring Positions: " + ring.size());
+        System.out.println("Active Servers: " + servers);
+
+        if (!ring.isEmpty()) {
+            System.out.println("\nServer Positions on Ring:");
+            for (Map.Entry<Long, String> entry : ring.entrySet()) {
+                System.out.printf("  Hash: %20d → Server: %s\n",
+                        entry.getKey(), entry.getValue());
+            }
+        }
+        System.out.println("=====================================\n");
+    }
+
+    /**
+     * Show the hash ring visually (simplified representation)
+     */
+    public void visualizeRing() {
+        System.out.println("\n🎨 === BASIC RING VISUALIZATION ===");
+
+        if (ring.isEmpty()) {
+            System.out.println("Ring is empty!");
+            return;
+        }
+
+        System.out.println("Ring positions (clockwise order):");
+
+        int position = 1;
+        for (Map.Entry<Long, String> entry : ring.entrySet()) {
+            System.out.printf("%d. %s (Hash: %d)\n",
+                    position++, entry.getValue(), entry.getKey());
+        }
+
+        System.out.println("\nSample key mappings:");
+        String[] sampleKeys = {"user1", "user2", "user3", "session123", "data456"};
+
+        for (String key : sampleKeys) {
+            String server = getServer(key);
+            long keyHash = computeHash(key);
+            System.out.printf("Key: %-10s (Hash: %20d) → %s\n",
+                    key, keyHash, server);
+        }
+
+        System.out.println("====================================\n");
+    }
 }
